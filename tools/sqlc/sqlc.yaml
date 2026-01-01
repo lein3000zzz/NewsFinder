@@ -5,6 +5,20 @@ sql:
     schema: "schema.sql"
     gen:
       go:
-        package: "nfappsqlc"
-        out: "nfappsqlc"
+        package: "nfsqlc"
+        out: "nfsqlc"
         sql_package: "pgx/v5"
+        overrides:
+          - db_type: "uuid"
+            nullable: false
+            go_type:
+              import: "github.com/google/uuid"
+              type: "UUID"
+          - column: "news.title"
+            nullable: true
+            go_type:
+              type: "string"
+          - db_type: "timestamptz"
+            nullable: false
+            go_type:
+              type: "time.Time"

@@ -19,7 +19,7 @@ CREATE TABLE news (
     title TEXT,
     content TEXT NOT NULL,
 
-    published_at TIMESTAMPTZ,
+    published_at TIMESTAMPTZ NOT NULL,
     ingested_at TIMESTAMPTZ NOT NULL,
 
     content_hash TEXT NOT NULL,

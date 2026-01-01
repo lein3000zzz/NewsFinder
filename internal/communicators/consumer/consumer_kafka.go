@@ -1,4 +1,4 @@
-package receiver
+package consumer
 
 import (
 	"NewsFinder/internal/pb/newsevent"
@@ -9,13 +9,13 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type KafkaReceiver struct {
+type KafkaConsumer struct {
 	logger      *zap.SugaredLogger
 	kafkaClient *kgo.Client
 	dataChan    chan *newsevent.NewsEvent
 }
 
-func NewKafkaReceiver(logger *zap.SugaredLogger, seeds []string, consumerGroup, topic string) *KafkaReceiver {
+func NewKafkaConsumer(logger *zap.SugaredLogger, seeds []string, consumerGroup, topic string) *KafkaConsumer {
 	client, err := kgo.NewClient(
 		kgo.SeedBrokers(seeds...),
 		kgo.ConsumerGroup(consumerGroup),
@@ -25,18 +25,18 @@ func NewKafkaReceiver(logger *zap.SugaredLogger, seeds []string, consumerGroup, 
 		logger.Fatal(err)
 	}
 
-	return &KafkaReceiver{
+	return &KafkaConsumer{
 		logger:      logger,
 		kafkaClient: client,
 		dataChan:    make(chan *newsevent.NewsEvent),
 	}
 }
 
-func (kr *KafkaReceiver) GetDataChan() <-chan *newsevent.NewsEvent {
+func (kr *KafkaConsumer) GetDataChan() <-chan *newsevent.NewsEvent {
 	return kr.dataChan
 }
 
-func (kr *KafkaReceiver) StartTopicConsumer() {
+func (kr *KafkaConsumer) StartTopicConsumer() {
 	ctx := context.Background()
 
 	for {

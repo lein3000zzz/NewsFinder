@@ -3,14 +3,14 @@ package main
 import (
 	"NewsFinder/internal/analyzer"
 	"NewsFinder/internal/app"
-	"NewsFinder/tools/sqlc/nfappsqlc"
+	"NewsFinder/tools/sqlc/nfsqlc"
 	"context"
 	"fmt"
 	"log"
 	"os"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
 
@@ -26,20 +26,19 @@ func main() {
 
 	ctx := context.Background()
 
-	conn, err := pgx.Connect(ctx, os.Getenv("PG_DSN"))
+	pool, err := pgxpool.New(ctx, os.Getenv("PG_DSN"))
 	if err != nil {
 		logger.Fatalf("Error connecting to database: %v", err)
 	}
-	defer conn.Close(ctx)
+	defer pool.Close()
 
-	queries := nfappsqlc.New(conn)
+	queries := nfsqlc.New(pool)
 
 	sources, err := queries.GetSources(ctx)
 	if err != nil {
 		logger.Fatalf("Error getting sources: %v", err)
 	}
 	logger.Infof("Found %d sources", len(sources))
-	return
 
 	inputText := "Binance Futures Will Launch USDⓈ-Margined COLLECTUSDT and MAGMAUSDT Perpetual Contract (2025-12-31)\n\n2025-12-31 13:15 (UTC): COLLECTUSDT Perpetual Contract with up to 20x leverage\n\n2025-12-31 13:30 (UTC): MAGMAUSDT Perpetual Contract with up to 20x leverage"
 
