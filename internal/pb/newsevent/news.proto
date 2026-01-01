@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package news.v1;
+
+option go_package = "./internal/pb/newsevent";
+
+message NewsEvent {
+  // референс на source id
+  string source_id = 1;
+
+  string title = 2;
+  string content = 3;
+
+  int64 published_at = 4;
+  int64 ingested_at = 5;
+}

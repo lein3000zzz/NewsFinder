@@ -1,5 +1,5 @@
 services:
-  database:
+  db:
     image: pgvector/pgvector:pg16
     ports:
       - "5432:5432"

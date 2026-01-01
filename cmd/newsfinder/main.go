@@ -3,18 +3,19 @@ package main
 import (
 	"NewsFinder/internal/analyzer"
 	"NewsFinder/internal/app"
+	"NewsFinder/tools/sqlc/nfappsqlc"
+	"context"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"go.uber.org/zap"
 )
 
 func main() {
 	app.InitEnv()
-
-	inputText := "Binance Futures Will Launch USDⓈ-Margined COLLECTUSDT and MAGMAUSDT Perpetual Contract (2025-12-31)\n\n2025-12-31 13:15 (UTC): COLLECTUSDT Perpetual Contract with up to 20x leverage\n\n2025-12-31 13:30 (UTC): MAGMAUSDT Perpetual Contract with up to 20x leverage"
-	// Prepare tensors
 
 	zapLogger, err := zap.NewProduction()
 	if err != nil {
@@ -22,6 +23,25 @@ func main() {
 	}
 
 	logger := zapLogger.Sugar()
+
+	ctx := context.Background()
+
+	conn, err := pgx.Connect(ctx, os.Getenv("PG_DSN"))
+	if err != nil {
+		logger.Fatalf("Error connecting to database: %v", err)
+	}
+	defer conn.Close(ctx)
+
+	queries := nfappsqlc.New(conn)
+
+	sources, err := queries.GetSources(ctx)
+	if err != nil {
+		logger.Fatalf("Error getting sources: %v", err)
+	}
+	logger.Infof("Found %d sources", len(sources))
+	return
+
+	inputText := "Binance Futures Will Launch USDⓈ-Margined COLLECTUSDT and MAGMAUSDT Perpetual Contract (2025-12-31)\n\n2025-12-31 13:15 (UTC): COLLECTUSDT Perpetual Contract with up to 20x leverage\n\n2025-12-31 13:30 (UTC): MAGMAUSDT Perpetual Contract with up to 20x leverage"
 
 	an := analyzer.NewNLPAnalyzer(logger)
 	res, err := an.Analyze(inputText)
