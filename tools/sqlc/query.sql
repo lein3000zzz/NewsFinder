@@ -24,3 +24,11 @@ SELECT 1
 FROM news
 WHERE content_hash = $1
 LIMIT 1;
+
+-- name: LookupEmbedding :one
+SELECT EXISTS (
+    SELECT 1 FROM news
+    WHERE content_embedding <=> $1 < 0.12
+    AND published_at > now() - interval '24 hours'
+    LIMIT 1
+);

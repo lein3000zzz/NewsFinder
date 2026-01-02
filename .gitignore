@@ -6,3 +6,6 @@ tools/models/finbert_base
 tools/models/finbert_quantized
 tools/models/winlib/onnxruntime.pdb
 deployments/opt
+deployments/kafka/kafka_server_jaas.conf
+deployments/kafka/kafka.env
+deployments/kafka/kafkaui.env

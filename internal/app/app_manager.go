@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/pgvector/pgvector-go"
 	"go.uber.org/zap"
 )
 
@@ -41,7 +42,7 @@ func (nf *NewsFinder) StartDataChanWorker() {
 	for event := range dataChan {
 		hardDedupRes, err := nf.dedup.CheckExistsHard(event)
 		if err != nil {
-			nf.logger.Errorw("Error checking existence, skipping", "err", err)
+			nf.logger.Errorw("Error checking existence hard, skipping", "err", err)
 			continue
 		}
 
@@ -50,17 +51,24 @@ func (nf *NewsFinder) StartDataChanWorker() {
 			continue
 		}
 
-		news, err := nf.convertEventToNews(event, hardDedupRes)
+		softDedupExists, err := nf.dedup.CheckExistsSoft(hardDedupRes)
+		if err != nil {
+			nf.logger.Errorw("Error checking existence soft, skipping", "err", err)
+			continue
+		}
+
+		news, err := nf.convertEventToNews(event, hardDedupRes, softDedupExists)
 		if err != nil {
 			nf.logger.Errorw("Error converting event to news, skipping", "event", event)
 			continue
 		}
+
 	}
 }
 
 // Конверт инициализирует стандартные значения для полей Analysis ([]byte), ContentEmbedding (pgvector.Vector), CreatedAt (time.Time)
 // они будут заполнены далее в пайплайне
-func (nf *NewsFinder) convertEventToNews(event *newsevent.NewsEvent, hardDedupRes *dedup.HardDedupResult) (*nfsqlc.News, error) {
+func (nf *NewsFinder) convertEventToNews(event *newsevent.NewsEvent, hardDedupRes *dedup.HardDedupResult, softDedupRes *dedup.SoftDedupRes) (*nfsqlc.News, error) {
 	v7, err := uuid.NewV7()
 	if err != nil {
 		nf.logger.Errorw("Error generating new v7", "err", err)
@@ -74,13 +82,14 @@ func (nf *NewsFinder) convertEventToNews(event *newsevent.NewsEvent, hardDedupRe
 	}
 
 	news := &nfsqlc.News{
-		ID:          v7,
-		SourceID:    sourceID,
-		Title:       event.Title,
-		Content:     event.Content,
-		PublishedAt: time.Unix(event.PublishedAt, 0),
-		IngestedAt:  time.Now(),
-		ContentHash: hardDedupRes.Hash,
+		ID:               v7,
+		SourceID:         sourceID,
+		Title:            event.Title,
+		Content:          event.Content,
+		PublishedAt:      time.Unix(event.PublishedAt, 0),
+		IngestedAt:       time.Now(),
+		ContentHash:      hardDedupRes.Hash,
+		ContentEmbedding: pgvector.NewVector(softDedupRes.Vector),
 	}
 
 	return news, nil

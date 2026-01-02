@@ -1,5 +1,7 @@
 entgo.io/ent v0.14.3 h1:wokAV/kIlH9TeklJWGGS7AYJdVckr0DloWjIcO9iIIQ=
 entgo.io/ent v0.14.3/go.mod h1:aDPE/OziPEu8+OWbzy4UlvWmD2/kbRuWfK2A40hcxJM=
+github.com/clems4ever/all-minilm-l6-v2-go v0.0.9 h1:Din1QD2Txop0zBbiZw50xuhyA/i4bjC0Tl4UDyo21X8=
+github.com/clems4ever/all-minilm-l6-v2-go v0.0.9/go.mod h1:WtVdEgRKESmKkuB63iG0QQGSrf8BhuS5hxk/sfOqBVk=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

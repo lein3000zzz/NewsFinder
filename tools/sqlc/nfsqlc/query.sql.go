@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/pgvector/pgvector-go"
 )
 
 const addNews = `-- name: AddNews :one
@@ -80,4 +81,20 @@ func (q *Queries) LookupByHash(ctx context.Context, contentHash string) (int32, 
 	var column_1 int32
 	err := row.Scan(&column_1)
 	return column_1, err
+}
+
+const lookupEmbedding = `-- name: LookupEmbedding :one
+SELECT EXISTS (
+    SELECT 1 FROM news
+    WHERE content_embedding <=> $1 < 0.12
+    AND published_at > now() - interval '24 hours'
+    LIMIT 1
+)
+`
+
+func (q *Queries) LookupEmbedding(ctx context.Context, contentEmbedding pgvector.Vector) (bool, error) {
+	row := q.db.QueryRow(ctx, lookupEmbedding, contentEmbedding)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }
