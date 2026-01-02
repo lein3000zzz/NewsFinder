@@ -2,7 +2,7 @@ package dedup
 
 import (
 	"NewsFinder/internal/datamanager"
-	"NewsFinder/internal/pb/newsevent"
+	"NewsFinder/internal/pb/news"
 	"crypto/sha256"
 	"encoding/hex"
 	"os"
@@ -39,11 +39,11 @@ func NewPgDedup(logger *zap.SugaredLogger, dm datamanager.DataManager) *PgDedupM
 	}
 }
 
-func (d *PgDedupManager) CheckExistsHard(event *newsevent.NewsEvent) (*HardDedupResult, error) {
+func (d *PgDedupManager) CheckExistsHard(event *news.NewsEvent) (*HardDedupResult, error) {
 	normalized := d.normalize(event)
 	hash := d.hashContent(normalized)
 
-	exists, err := d.dm.LookupByHash(hash)
+	exists, err := d.dm.LookupNewsByHash(hash)
 	if err != nil {
 		d.logger.Errorw("error looking up hash", "hash", hash, "error", err)
 		return nil, err
@@ -67,7 +67,7 @@ func (d *PgDedupManager) CheckExistsSoft(hardRes *HardDedupResult) (*SoftDedupRe
 		return nil, err
 	}
 
-	exists, err := d.dm.LookupByEmbedding(vector)
+	exists, err := d.dm.LookupNewsByEmbedding(vector)
 	if err != nil {
 		d.logger.Errorw("error looking up embedding", "error", err)
 		return nil, err
@@ -93,7 +93,7 @@ func (d *PgDedupManager) computeEmbedding(hardRes *HardDedupResult) ([]float32, 
 	return vector, nil
 }
 
-func (d *PgDedupManager) normalize(news *newsevent.NewsEvent) string {
+func (d *PgDedupManager) normalize(news *news.NewsEvent) string {
 	normalized := news.Title + "\n" + news.Content
 
 	normalized = norm.NFKC.String(normalized)

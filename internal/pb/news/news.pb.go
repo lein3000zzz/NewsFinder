@@ -4,7 +4,7 @@
 // 	protoc        v6.33.0
 // source: news.proto
 
-package newsevent
+package news
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"

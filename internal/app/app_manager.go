@@ -2,11 +2,10 @@ package app
 
 import (
 	"NewsFinder/internal/analyzer"
-	"NewsFinder/internal/communicators/consumer"
+	"NewsFinder/internal/communicator"
 	"NewsFinder/internal/datamanager"
 	"NewsFinder/internal/dedup"
-	"NewsFinder/internal/pb/newsevent"
-	"NewsFinder/tools/sqlc/nfsqlc"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,13 +15,13 @@ import (
 
 type NewsFinder struct {
 	logger   *zap.SugaredLogger
-	consumer consumer.Consumer
+	consumer communicator.Communicator
 	dedup    dedup.ManagerDedup
 	dm       datamanager.DataManager
 	analyzer analyzer.Analyzer
 }
 
-func NewNewsFinder(logger *zap.SugaredLogger, receiver consumer.Consumer, dm datamanager.DataManager, dedup dedup.ManagerDedup, analyzer analyzer.Analyzer) *NewsFinder {
+func NewNewsFinder(logger *zap.SugaredLogger, receiver communicator.Communicator, dm datamanager.DataManager, dedup dedup.ManagerDedup, analyzer analyzer.Analyzer) *NewsFinder {
 	return &NewsFinder{
 		logger:   logger,
 		consumer: receiver,
@@ -37,17 +36,17 @@ func (nf *NewsFinder) StartApp() {
 }
 
 func (nf *NewsFinder) StartDataChanWorker() {
-	dataChan := nf.consumer.GetDataChan()
+	dataChan := nf.consumer.GetConsumeChan()
 
-	for event := range dataChan {
-		hardDedupRes, err := nf.dedup.CheckExistsHard(event)
+	for message := range dataChan {
+		hardDedupRes, err := nf.dedup.CheckExistsHard(message.Event)
 		if err != nil {
 			nf.logger.Errorw("Error checking existence hard, skipping", "err", err)
 			continue
 		}
 
 		if hardDedupRes.Exists {
-			nf.logger.Debugw("Found hard duplicate, skipping...", "event", event)
+			nf.logger.Debugw("Found hard duplicate, skipping...", "message", message)
 			continue
 		}
 
@@ -57,40 +56,65 @@ func (nf *NewsFinder) StartDataChanWorker() {
 			continue
 		}
 
-		news, err := nf.convertEventToNews(event, hardDedupRes, softDedupExists)
+		analysisRes, err := nf.analyzer.Analyze(hardDedupRes.Normalized)
 		if err != nil {
-			nf.logger.Errorw("Error converting event to news, skipping", "event", event)
+			nf.logger.Errorw("Error analyzing hard duplicate, skipping", "err", err)
 			continue
 		}
 
+		news, err := nf.convertDataToAddNews(message, hardDedupRes, softDedupExists, analysisRes)
+		if err != nil {
+			nf.logger.Errorw("Error converting message to news, skipping", "message", message)
+			continue
+		}
+
+		id, err := nf.dm.InsertNews(news)
+		if err != nil {
+			nf.logger.Errorw("Error inserting news, skipping", "message", message)
+			continue
+		}
+
+		nf.logger.Debugw("Inserted new news", "id", id.String())
 	}
 }
 
-// Конверт инициализирует стандартные значения для полей Analysis ([]byte), ContentEmbedding (pgvector.Vector), CreatedAt (time.Time)
-// они будут заполнены далее в пайплайне
-func (nf *NewsFinder) convertEventToNews(event *newsevent.NewsEvent, hardDedupRes *dedup.HardDedupResult, softDedupRes *dedup.SoftDedupRes) (*nfsqlc.News, error) {
+func (nf *NewsFinder) convertDataToAddNews(
+	message *communicator.ConsumeMessage,
+	hardDedupRes *dedup.HardDedupResult,
+	softDedupRes *dedup.SoftDedupRes,
+	analysisRes *analyzer.AnalysisRes,
+) (*datamanager.NewsParams, error) {
 	v7, err := uuid.NewV7()
 	if err != nil {
 		nf.logger.Errorw("Error generating new v7", "err", err)
 		return nil, err
 	}
 
-	sourceID, err := uuid.Parse(event.SourceId)
+	sourceID, err := uuid.Parse(message.Event.SourceId)
 	if err != nil {
 		nf.logger.Errorw("Error parsing source id", "err", err)
 		return nil, err
 	}
 
-	news := &nfsqlc.News{
+	analysis, err := json.Marshal(analysisRes)
+	if err != nil {
+		nf.logger.Errorw("Error marshalling analysis", "err", err)
+		return nil, err
+	}
+
+	news := &datamanager.NewsParams{
 		ID:               v7,
 		SourceID:         sourceID,
-		Title:            event.Title,
-		Content:          event.Content,
-		PublishedAt:      time.Unix(event.PublishedAt, 0),
-		IngestedAt:       time.Now(),
+		Title:            message.Event.Title,
+		Content:          message.Event.Content,
+		PublishedAt:      time.Unix(message.Event.PublishedAt, 0),
+		IngestedAt:       message.IngestedAt,
 		ContentHash:      hardDedupRes.Hash,
 		ContentEmbedding: pgvector.NewVector(softDedupRes.Vector),
+		Analysis:         analysis,
 	}
+
+	nf.logger.Debugw("Converted news", "news", news)
 
 	return news, nil
 }

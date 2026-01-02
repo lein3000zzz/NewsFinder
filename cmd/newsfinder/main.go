@@ -3,7 +3,6 @@ package main
 import (
 	"NewsFinder/internal/analyzer"
 	"NewsFinder/internal/app"
-	"NewsFinder/tools/sqlc/nfsqlc"
 	"context"
 	"fmt"
 	"log"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/lein3000zzz/vault-config-manager/pkg/manager"
 	"go.uber.org/zap"
 )
 
@@ -32,13 +32,15 @@ func main() {
 	}
 	defer pool.Close()
 
-	queries := nfsqlc.New(pool)
+	vaultAddress := os.Getenv("VAULT_ADDR")
+	token := os.Getenv("VAULT_TOKEN")
 
-	sources, err := queries.GetSources(ctx)
+	secretManager, err := manager.NewSecretManager(vaultAddress, token, manager.DefaultBasePathData, manager.DefaultBasePathMetaData, logger)
 	if err != nil {
-		logger.Fatalf("Error getting sources: %v", err)
+		logger.Fatalf("Error initializing secret manager: %v", err)
 	}
-	logger.Infof("Found %d sources", len(sources))
+
+	//queries := nfsqlc.New(pool)
 
 	inputText := "Binance Futures Will Launch USDⓈ-Margined COLLECTUSDT and MAGMAUSDT Perpetual Contract (2025-12-31)\n\n2025-12-31 13:15 (UTC): COLLECTUSDT Perpetual Contract with up to 20x leverage\n\n2025-12-31 13:30 (UTC): MAGMAUSDT Perpetual Contract with up to 20x leverage"
 

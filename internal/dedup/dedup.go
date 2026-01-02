@@ -1,6 +1,6 @@
 package dedup
 
-import "NewsFinder/internal/pb/newsevent"
+import "NewsFinder/internal/pb/news"
 
 type HardDedupResult struct {
 	Exists     bool
@@ -14,6 +14,6 @@ type SoftDedupRes struct {
 }
 
 type ManagerDedup interface {
-	CheckExistsHard(event *newsevent.NewsEvent) (*HardDedupResult, error)
+	CheckExistsHard(event *news.NewsEvent) (*HardDedupResult, error)
 	CheckExistsSoft(hardRes *HardDedupResult) (*SoftDedupRes, error)
 }

@@ -14,3 +14,23 @@ message NewsEvent {
   int64 published_at = 4;
   int64 ingested_at = 5;
 }
+
+message NewsAnalyzed {
+  Source source = 1;
+
+  string title = 2;
+  string content = 3;
+
+  int64 published_at = 4;
+  int64 ingested_at = 5;
+  int64 prepared_at = 6;
+
+
+}
+
+
+
+message Source {
+  string name = 1;
+  float credibility = 2;
+}

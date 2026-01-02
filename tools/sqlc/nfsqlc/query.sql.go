@@ -7,6 +7,7 @@ package nfsqlc
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/pgvector/pgvector-go"
@@ -23,56 +24,65 @@ INSERT INTO news (
     content_hash,
     analysis,
     content_embedding
-)
-SELECT id, source_id, title, content, published_at, ingested_at, content_hash, analysis, content_embedding
-FROM json_populate_record(NULL::news, $1::jsonb)
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     ON CONFLICT (content_hash) DO NOTHING
 RETURNING id
 `
 
-func (q *Queries) AddNews(ctx context.Context, dollar_1 []byte) (uuid.UUID, error) {
-	row := q.db.QueryRow(ctx, addNews, dollar_1)
+type AddNewsParams struct {
+	ID               uuid.UUID
+	SourceID         uuid.UUID
+	Title            string
+	Content          string
+	PublishedAt      time.Time
+	IngestedAt       time.Time
+	ContentHash      string
+	Analysis         []byte
+	ContentEmbedding pgvector.Vector
+}
+
+func (q *Queries) AddNews(ctx context.Context, arg AddNewsParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, addNews,
+		arg.ID,
+		arg.SourceID,
+		arg.Title,
+		arg.Content,
+		arg.PublishedAt,
+		arg.IngestedAt,
+		arg.ContentHash,
+		arg.Analysis,
+		arg.ContentEmbedding,
+	)
 	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err
 }
 
-const getSources = `-- name: GetSources :many
-SELECT id, name, credibility, active, created_at, updated_at FROM sources
+const getSourceByID = `-- name: GetSourceByID :one
+SELECT id, name, credibility, active, created_at, updated_at
+    FROM sources
+    WHERE id = $1
+LIMIT 1
 `
 
-// TODO: Пример, взят из гайда, сделать под себя. https://docs.sqlc.dev/en/stable/tutorials/getting-started-postgresql.html
-func (q *Queries) GetSources(ctx context.Context) ([]Source, error) {
-	rows, err := q.db.Query(ctx, getSources)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Source
-	for rows.Next() {
-		var i Source
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Credibility,
-			&i.Active,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+func (q *Queries) GetSourceByID(ctx context.Context, id uuid.UUID) (Source, error) {
+	row := q.db.QueryRow(ctx, getSourceByID, id)
+	var i Source
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Credibility,
+		&i.Active,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
-const lookupByHash = `-- name: LookupByHash :one
+const lookupByHash = `-- name: LookupNewsByHash :one
 SELECT 1
-FROM news
-WHERE content_hash = $1
+    FROM news
+    WHERE content_hash = $1
 LIMIT 1
 `
 
@@ -86,7 +96,7 @@ func (q *Queries) LookupByHash(ctx context.Context, contentHash string) (int32, 
 const lookupEmbedding = `-- name: LookupEmbedding :one
 SELECT EXISTS (
     SELECT 1 FROM news
-    WHERE content_embedding <=> $1 < 0.12
+    WHERE content_embedding <=> $1 < 0.15
     AND published_at > now() - interval '24 hours'
     LIMIT 1
 )

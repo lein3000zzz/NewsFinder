@@ -1,0 +1,57 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    ports:
+      - "5432:5432"
+    env_file:
+      - main.env
+    volumes:
+      - ./deployments/opt/postgres_data:/var/lib/postgresql/data
+      - ./deployments/pgvector/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      newsfinder:
+
+  broker:
+    image: apache/kafka:latest
+    container_name: broker
+    env_file:
+      - deployments/kafka/kafka.env
+    volumes:
+      - ./deployments/kafka/kafka_server_jaas.conf:/etc/kafka/kafka_server_jaas.conf
+    ports:
+      - "29092:29092"
+    networks:
+      newsfinder:
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    depends_on:
+      - broker
+    env_file:
+      - deployments/kafka/kafkaui.env
+    ports:
+      - "8080:8080"
+    networks:
+      newsfinder:
+
+  vault:
+    image: hashicorp/vault
+    environment:
+#       VAULT_DEV_ROOT_TOKEN_ID: 123
+#       VAULT_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
+       VAULT_ADDR: "http://0.0.0.0:8200"
+    volumes:
+      - ./deployments/opt/vault/data:/vault/data
+      - ./deployments/vault/config:/vault/config
+    ports:
+      - "8200:8200"
+    cap_add:
+      - IPC_LOCK
+    command: "server" # -config=/vault/config/vault.hcl # Конфиг подтягивается автоматически из файлов
+    restart: always
+    networks:
+      newsfinder:
+
+networks:
+  newsfinder:
+    driver: bridge

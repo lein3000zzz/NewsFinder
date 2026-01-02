@@ -1,12 +1,23 @@
 package datamanager
 
-import "time"
+import (
+	"NewsFinder/tools/sqlc/nfsqlc"
+	"time"
+
+	"github.com/google/uuid"
+)
 
 const (
 	dbTimeout = 3 * time.Second
 )
 
+type News = nfsqlc.News
+type NewsParams = nfsqlc.AddNewsParams
+type Source = nfsqlc.Source
+
 type DataManager interface {
-	LookupByHash(hash string) (bool, error)
-	LookupByEmbedding(vector []float32) (bool, error)
+	LookupNewsByHash(hash string) (bool, error)
+	LookupNewsByEmbedding(vector []float32) (bool, error)
+	InsertNews(news *NewsParams) (*uuid.UUID, error)
+	GetSourceByID(id uuid.UUID) (*Source, error)
 }

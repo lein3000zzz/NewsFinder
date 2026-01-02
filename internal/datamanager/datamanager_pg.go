@@ -1,15 +1,14 @@
 package datamanager
 
 import (
-	"NewsFinder/internal/pb/newsevent"
 	"NewsFinder/tools/sqlc/nfsqlc"
 	"context"
 	"errors"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/pgvector/pgvector-go"
 	"go.uber.org/zap"
-	"google.golang.org/protobuf/proto"
 )
 
 type PgDataManager struct {
@@ -24,7 +23,7 @@ func NewPgDataManager(logger *zap.SugaredLogger, queries *nfsqlc.Queries) *PgDat
 	}
 }
 
-func (dm *PgDataManager) LookupByHash(hash string) (bool, error) {
+func (dm *PgDataManager) LookupNewsByHash(hash string) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
 
@@ -41,7 +40,7 @@ func (dm *PgDataManager) LookupByHash(hash string) (bool, error) {
 	return true, nil
 }
 
-func (dm *PgDataManager) LookupByEmbedding(vector []float32) (bool, error) {
+func (dm *PgDataManager) LookupNewsByEmbedding(vector []float32) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
 
@@ -61,18 +60,35 @@ func (dm *PgDataManager) LookupByEmbedding(vector []float32) (bool, error) {
 	return exists, nil
 }
 
-func (dm *PgDataManager) InsertNews(event *newsevent.NewsEvent) {
-	b, err := proto.Marshal(event)
+func (dm *PgDataManager) InsertNews(news *NewsParams) (*uuid.UUID, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+	defer cancel()
+
+	newID, err := dm.queries.AddNews(ctx, *news)
 	if err != nil {
-		dm.logger.Errorf("failed to marshal event: %v", err)
-		return
+		dm.logger.Errorw("error adding news", "err", err)
+		return nil, err
 	}
 
-	id, err := dm.queries.AddNews(context.Background(), b)
+	return &newID, nil
+}
+
+func (dm *PgDataManager) GetSourceByID(id uuid.UUID) (*Source, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+	defer cancel()
+
+	source, err := dm.queries.GetSourceByID(ctx, id)
 	if err != nil {
-		dm.logger.Errorf("failed to insert news: %v", err)
-		return
+		if errors.Is(err, pgx.ErrNoRows) {
+			dm.logger.Warnw("no source found", "id", id)
+			return nil, ErrNotFound
+		}
+
+		dm.logger.Errorw("error getting source by id", "id", id, "err", err)
+		return nil, err
 	}
 
-	_ = id
+	dm.logger.Debugw("source by id", "id", id)
+
+	return &source, nil
 }
