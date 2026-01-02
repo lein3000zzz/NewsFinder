@@ -22,11 +22,11 @@ type NewsFinder struct {
 	analyzer     analyzer.Analyzer
 }
 
-func NewNewsFinder(config Config, logger *zap.SugaredLogger, receiver communicator.Communicator, dm datamanager.DataManager, dedup dedup.ManagerDedup, analyzer analyzer.Analyzer) *NewsFinder {
+func NewNewsFinder(config Config, logger *zap.SugaredLogger, communicator communicator.Communicator, dm datamanager.DataManager, dedup dedup.ManagerDedup, analyzer analyzer.Analyzer) *NewsFinder {
 	return &NewsFinder{
 		config:       config,
 		logger:       logger,
-		communicator: receiver,
+		communicator: communicator,
 		dm:           dm,
 		dedup:        dedup,
 		analyzer:     analyzer,
