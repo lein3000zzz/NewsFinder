@@ -2,18 +2,24 @@ package tagdetector
 
 import (
 	"NewsFinder/internal/analyzer/tagdetector/externaldata"
+	"regexp"
+	"strings"
 
 	"github.com/lein3000zzz/vault-config-manager/pkg/manager"
 	"go.uber.org/zap"
 )
 
-type MemoryDetector struct {
+var (
+	nonAlphanumeric = regexp.MustCompile(`[^a-zA-Z0-9]`)
+)
+
+type MemoryTagDetector struct {
 	logger        *zap.SugaredLogger
 	sm            manager.SecretManager
 	cacheEntities map[string]struct{}
 }
 
-func NewMemoryDetector(logger *zap.SugaredLogger, sm manager.SecretManager) *MemoryDetector {
+func NewMemoryTagDetector(logger *zap.SugaredLogger, sm manager.SecretManager) *MemoryTagDetector {
 	url, err := sm.GetSecretStringFromConfig("binance_url")
 	if err != nil {
 		logger.Fatalf("error getting secret string from config: %v", err)
@@ -23,9 +29,34 @@ func NewMemoryDetector(logger *zap.SugaredLogger, sm manager.SecretManager) *Mem
 		logger.Fatalf("error getting binance info: %v", err)
 	}
 
-	return &MemoryDetector{
+	return &MemoryTagDetector{
 		logger:        logger,
 		cacheEntities: set,
 		sm:            sm,
 	}
+}
+
+func (md *MemoryTagDetector) DetectTags(content string) *DetectorRes {
+	words := strings.Fields(nonAlphanumeric.ReplaceAllString(strings.ToUpper(content), " "))
+
+	foundTags := make(map[string]struct{})
+
+	for _, word := range words {
+		if _, exists := md.cacheEntities[word]; exists {
+			foundTags["#"+word] = struct{}{}
+		}
+	}
+
+	var tags []string
+	for tag := range foundTags {
+		tags = append(tags, tag)
+	}
+
+	md.logger.Debugw("tags detector run", "tags", tags)
+
+	res := DetectorRes{
+		Tags: tags,
+	}
+
+	return &res
 }

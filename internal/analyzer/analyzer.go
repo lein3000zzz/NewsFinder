@@ -1,7 +1,13 @@
 package analyzer
 
+import (
+	"NewsFinder/internal/analyzer/nlp"
+	"NewsFinder/internal/analyzer/tagdetector"
+)
+
 type AnalysisRes struct {
-	DetectedTags []string
+	tagDetectorRes *tagdetector.DetectorRes
+	nlpRes         *nlp.CryptoBertRes
 }
 
 type Analyzer interface {

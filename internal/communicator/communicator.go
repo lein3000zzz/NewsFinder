@@ -11,10 +11,11 @@ type ConsumeMessage struct {
 }
 
 type ProduceMessage struct {
-	Data []byte
+	NewsAnalyzed *news.NewsAnalyzed
 }
 
 type Communicator interface {
 	GetConsumeChan() <-chan *ConsumeMessage
 	StartTopicConsumer()
+	WriteToProduceChan(msg *ProduceMessage)
 }

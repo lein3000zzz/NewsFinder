@@ -9,6 +9,7 @@ package news
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	structpb "google.golang.org/protobuf/types/known/structpb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -98,19 +99,176 @@ func (x *NewsEvent) GetIngestedAt() int64 {
 	return 0
 }
 
+type NewsAnalyzed struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Source        *Source                `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`
+	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	Content       string                 `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
+	PublishedAt   int64                  `protobuf:"varint,4,opt,name=published_at,json=publishedAt,proto3" json:"published_at,omitempty"`
+	IngestedAt    int64                  `protobuf:"varint,5,opt,name=ingested_at,json=ingestedAt,proto3" json:"ingested_at,omitempty"`
+	PreparedAt    int64                  `protobuf:"varint,6,opt,name=prepared_at,json=preparedAt,proto3" json:"prepared_at,omitempty"`
+	Analysis      *structpb.Struct       `protobuf:"bytes,7,opt,name=analysis,proto3" json:"analysis,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NewsAnalyzed) Reset() {
+	*x = NewsAnalyzed{}
+	mi := &file_news_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NewsAnalyzed) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NewsAnalyzed) ProtoMessage() {}
+
+func (x *NewsAnalyzed) ProtoReflect() protoreflect.Message {
+	mi := &file_news_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NewsAnalyzed.ProtoReflect.Descriptor instead.
+func (*NewsAnalyzed) Descriptor() ([]byte, []int) {
+	return file_news_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *NewsAnalyzed) GetSource() *Source {
+	if x != nil {
+		return x.Source
+	}
+	return nil
+}
+
+func (x *NewsAnalyzed) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *NewsAnalyzed) GetContent() string {
+	if x != nil {
+		return x.Content
+	}
+	return ""
+}
+
+func (x *NewsAnalyzed) GetPublishedAt() int64 {
+	if x != nil {
+		return x.PublishedAt
+	}
+	return 0
+}
+
+func (x *NewsAnalyzed) GetIngestedAt() int64 {
+	if x != nil {
+		return x.IngestedAt
+	}
+	return 0
+}
+
+func (x *NewsAnalyzed) GetPreparedAt() int64 {
+	if x != nil {
+		return x.PreparedAt
+	}
+	return 0
+}
+
+func (x *NewsAnalyzed) GetAnalysis() *structpb.Struct {
+	if x != nil {
+		return x.Analysis
+	}
+	return nil
+}
+
+type Source struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Credibility   float32                `protobuf:"fixed32,2,opt,name=credibility,proto3" json:"credibility,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Source) Reset() {
+	*x = Source{}
+	mi := &file_news_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Source) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Source) ProtoMessage() {}
+
+func (x *Source) ProtoReflect() protoreflect.Message {
+	mi := &file_news_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Source.ProtoReflect.Descriptor instead.
+func (*Source) Descriptor() ([]byte, []int) {
+	return file_news_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *Source) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Source) GetCredibility() float32 {
+	if x != nil {
+		return x.Credibility
+	}
+	return 0
+}
+
 var File_news_proto protoreflect.FileDescriptor
 
 const file_news_proto_rawDesc = "" +
 	"\n" +
 	"\n" +
-	"news.proto\x12\anews.v1\"\x9c\x01\n" +
+	"news.proto\x12\anews.v1\x1a\x1cgoogle/protobuf/struct.proto\"\x9c\x01\n" +
 	"\tNewsEvent\x12\x1b\n" +
 	"\tsource_id\x18\x01 \x01(\tR\bsourceId\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x18\n" +
 	"\acontent\x18\x03 \x01(\tR\acontent\x12!\n" +
 	"\fpublished_at\x18\x04 \x01(\x03R\vpublishedAt\x12\x1f\n" +
 	"\vingested_at\x18\x05 \x01(\x03R\n" +
-	"ingestedAtB\x19Z\x17./internal/pb/newseventb\x06proto3"
+	"ingestedAt\"\x81\x02\n" +
+	"\fNewsAnalyzed\x12'\n" +
+	"\x06source\x18\x01 \x01(\v2\x0f.news.v1.SourceR\x06source\x12\x14\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\x12\x18\n" +
+	"\acontent\x18\x03 \x01(\tR\acontent\x12!\n" +
+	"\fpublished_at\x18\x04 \x01(\x03R\vpublishedAt\x12\x1f\n" +
+	"\vingested_at\x18\x05 \x01(\x03R\n" +
+	"ingestedAt\x12\x1f\n" +
+	"\vprepared_at\x18\x06 \x01(\x03R\n" +
+	"preparedAt\x123\n" +
+	"\banalysis\x18\a \x01(\v2\x17.google.protobuf.StructR\banalysis\">\n" +
+	"\x06Source\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
+	"\vcredibility\x18\x02 \x01(\x02R\vcredibilityB\x14Z\x12./internal/pb/newsb\x06proto3"
 
 var (
 	file_news_proto_rawDescOnce sync.Once
@@ -124,16 +282,21 @@ func file_news_proto_rawDescGZIP() []byte {
 	return file_news_proto_rawDescData
 }
 
-var file_news_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_news_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_news_proto_goTypes = []any{
-	(*NewsEvent)(nil), // 0: news.v1.NewsEvent
+	(*NewsEvent)(nil),       // 0: news.v1.NewsEvent
+	(*NewsAnalyzed)(nil),    // 1: news.v1.NewsAnalyzed
+	(*Source)(nil),          // 2: news.v1.Source
+	(*structpb.Struct)(nil), // 3: google.protobuf.Struct
 }
 var file_news_proto_depIdxs = []int32{
-	0, // [0:0] is the sub-list for method output_type
-	0, // [0:0] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	2, // 0: news.v1.NewsAnalyzed.source:type_name -> news.v1.Source
+	3, // 1: news.v1.NewsAnalyzed.analysis:type_name -> google.protobuf.Struct
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_news_proto_init() }
@@ -147,7 +310,7 @@ func file_news_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_news_proto_rawDesc), len(file_news_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   1,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

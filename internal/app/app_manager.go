@@ -5,29 +5,31 @@ import (
 	"NewsFinder/internal/communicator"
 	"NewsFinder/internal/datamanager"
 	"NewsFinder/internal/dedup"
-	"encoding/json"
+	"NewsFinder/internal/pb/news"
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/pgvector/pgvector-go"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type NewsFinder struct {
-	logger   *zap.SugaredLogger
-	consumer communicator.Communicator
-	dedup    dedup.ManagerDedup
-	dm       datamanager.DataManager
-	analyzer analyzer.Analyzer
+	config       Config
+	logger       *zap.SugaredLogger
+	communicator communicator.Communicator
+	dedup        dedup.ManagerDedup
+	dm           datamanager.DataManager
+	analyzer     analyzer.Analyzer
 }
 
-func NewNewsFinder(logger *zap.SugaredLogger, receiver communicator.Communicator, dm datamanager.DataManager, dedup dedup.ManagerDedup, analyzer analyzer.Analyzer) *NewsFinder {
+func NewNewsFinder(config Config, logger *zap.SugaredLogger, receiver communicator.Communicator, dm datamanager.DataManager, dedup dedup.ManagerDedup, analyzer analyzer.Analyzer) *NewsFinder {
 	return &NewsFinder{
-		logger:   logger,
-		consumer: receiver,
-		dm:       dm,
-		dedup:    dedup,
-		analyzer: analyzer,
+		config:       config,
+		logger:       logger,
+		communicator: receiver,
+		dm:           dm,
+		dedup:        dedup,
+		analyzer:     analyzer,
 	}
 }
 
@@ -35,8 +37,9 @@ func (nf *NewsFinder) StartApp() {
 
 }
 
+// StartDataChanWorker TODO: refactor + add locking and parallel workers
 func (nf *NewsFinder) StartDataChanWorker() {
-	dataChan := nf.consumer.GetConsumeChan()
+	dataChan := nf.communicator.GetConsumeChan()
 
 	for message := range dataChan {
 		hardDedupRes, err := nf.dedup.CheckExistsHard(message.Event)
@@ -62,59 +65,63 @@ func (nf *NewsFinder) StartDataChanWorker() {
 			continue
 		}
 
-		news, err := nf.convertDataToAddNews(message, hardDedupRes, softDedupExists, analysisRes)
+		newsParams, err := nf.convertResultsToNewsParams(message, hardDedupRes, softDedupExists, analysisRes)
 		if err != nil {
-			nf.logger.Errorw("Error converting message to news, skipping", "message", message)
+			nf.logger.Errorw("Error converting message to newsParams, skipping", "message", message)
 			continue
 		}
 
-		id, err := nf.dm.InsertNews(news)
-		if err != nil {
-			nf.logger.Errorw("Error inserting news, skipping", "message", message)
-			continue
+		if nf.config.SaveToDB {
+			id, err := nf.dm.InsertNews(newsParams)
+
+			if err != nil {
+				nf.logger.Errorw("Error inserting news, skipping", "message", message)
+				//continue // TODO: решить, будет ли неудачное добавление в бд обрывать пайплайн
+			} else {
+				nf.logger.Debugw("Inserted new news", "id", id.String())
+			}
 		}
 
-		nf.logger.Debugw("Inserted new news", "id", id.String())
+		if nf.config.ProduceMessages {
+			go nf.produceFinalMessage(newsParams)
+		}
 	}
 }
 
-func (nf *NewsFinder) convertDataToAddNews(
-	message *communicator.ConsumeMessage,
-	hardDedupRes *dedup.HardDedupResult,
-	softDedupRes *dedup.SoftDedupRes,
-	analysisRes *analyzer.AnalysisRes,
-) (*datamanager.NewsParams, error) {
-	v7, err := uuid.NewV7()
+func (nf *NewsFinder) produceFinalMessage(newsParams *datamanager.NewsParams) {
+	source, err := nf.dm.GetSourceByID(newsParams.SourceID)
 	if err != nil {
-		nf.logger.Errorw("Error generating new v7", "err", err)
+		source = datamanager.UnknownSource
+		nf.logger.Errorw("Error getting source by id, defaulting to unknown", "id", source.ID.String())
+	}
+
+	msg, err := nf.constructProduceMsg(source, newsParams)
+	if err != nil {
+		nf.logger.Errorw("Error constructing news message, skipping", "message", msg, "err", err)
+		return
+	}
+
+	nf.communicator.WriteToProduceChan(msg)
+}
+
+func (nf *NewsFinder) constructProduceMsg(source *datamanager.Source, newsParams *datamanager.NewsParams) (*communicator.ProduceMessage, error) {
+	analysis := &structpb.Struct{}
+	if err := protojson.Unmarshal(newsParams.Analysis, analysis); err != nil {
+		nf.logger.Errorw("Error unmarshaling analysis", "err", err)
 		return nil, err
 	}
 
-	sourceID, err := uuid.Parse(message.Event.SourceId)
-	if err != nil {
-		nf.logger.Errorw("Error parsing source id", "err", err)
-		return nil, err
+	pbSource := nf.convertSqlcSourceToPbSource(source)
+
+	newsAnalyzed := news.NewsAnalyzed{
+		Source:      pbSource,
+		Title:       newsParams.Title,
+		Content:     newsParams.Content,
+		PublishedAt: newsParams.PublishedAt.Unix(),
+		IngestedAt:  newsParams.IngestedAt.Unix(),
+		PreparedAt:  time.Now().Unix(),
+		Analysis:    analysis,
 	}
 
-	analysis, err := json.Marshal(analysisRes)
-	if err != nil {
-		nf.logger.Errorw("Error marshalling analysis", "err", err)
-		return nil, err
-	}
-
-	news := &datamanager.NewsParams{
-		ID:               v7,
-		SourceID:         sourceID,
-		Title:            message.Event.Title,
-		Content:          message.Event.Content,
-		PublishedAt:      time.Unix(message.Event.PublishedAt, 0),
-		IngestedAt:       message.IngestedAt,
-		ContentHash:      hardDedupRes.Hash,
-		ContentEmbedding: pgvector.NewVector(softDedupRes.Vector),
-		Analysis:         analysis,
-	}
-
-	nf.logger.Debugw("Converted news", "news", news)
-
-	return news, nil
+	return &communicator.ProduceMessage{NewsAnalyzed: &newsAnalyzed}, nil
 }

@@ -20,31 +20,50 @@ type KafkaConfig struct {
 }
 
 type KafkaCommunicator struct {
-	logger      *zap.SugaredLogger
-	kafkaClient *kgo.Client
-	consumeChan chan *ConsumeMessage
-	produceChan chan *ProduceMessage
+	logger         *zap.SugaredLogger
+	consumerClient *kgo.Client
+	producerClient *kgo.Client
+	consumeChan    chan *ConsumeMessage
+	produceChan    chan *ProduceMessage
 }
 
-func NewKafkaConsumer(logger *zap.SugaredLogger, config *KafkaConfig) *KafkaCommunicator {
-	client, err := kgo.NewClient(
-		kgo.SeedBrokers(config.Seeds...),
-		kgo.ConsumerGroup(config.ConsumerGroup),
-		kgo.ConsumeTopics(config.Topic),
+func NewKafkaConsumer(logger *zap.SugaredLogger, consumerConfig, producerConfig *KafkaConfig) *KafkaCommunicator {
+	consumerClient, err := kgo.NewClient(
+		kgo.SeedBrokers(consumerConfig.Seeds...),
+		kgo.ConsumerGroup(consumerConfig.ConsumerGroup),
+		kgo.ConsumeTopics(consumerConfig.Topic),
 		kgo.SASL(plain.Auth{
-			User: config.User,
-			Pass: config.Password,
+			User: consumerConfig.User,
+			Pass: consumerConfig.Password,
 		}.AsMechanism()),
 	)
 	if err != nil {
 		logger.Fatal(err)
 	}
 
+	var producerClient *kgo.Client
+	if producerConfig != nil {
+		producerClient, err = kgo.NewClient(
+			kgo.SeedBrokers(producerConfig.Seeds...),
+			kgo.ConsumerGroup(producerConfig.ConsumerGroup),
+			kgo.DefaultProduceTopic(producerConfig.Topic),
+			kgo.SASL(plain.Auth{
+				User: consumerConfig.User,
+				Pass: consumerConfig.Password,
+			}.AsMechanism()),
+		)
+
+		if err != nil {
+			logger.Fatal(err)
+		}
+	}
+
 	return &KafkaCommunicator{
-		logger:      logger,
-		kafkaClient: client,
-		consumeChan: make(chan *ConsumeMessage),
-		produceChan: make(chan *ProduceMessage),
+		logger:         logger,
+		consumerClient: consumerClient,
+		producerClient: producerClient,
+		consumeChan:    make(chan *ConsumeMessage, 500),
+		produceChan:    make(chan *ProduceMessage, 100),
 	}
 }
 
@@ -52,15 +71,15 @@ func (kr *KafkaCommunicator) GetConsumeChan() <-chan *ConsumeMessage {
 	return kr.consumeChan
 }
 
-func (kr *KafkaCommunicator) GetProduceChan() <-chan *ProduceMessage {
-	return kr.produceChan
+func (kr *KafkaCommunicator) WriteToProduceChan(msg *ProduceMessage) {
+	kr.produceChan <- msg
 }
 
 func (kr *KafkaCommunicator) StartTopicConsumer() {
 	ctx := context.Background()
 
 	for {
-		fetches := kr.kafkaClient.PollFetches(ctx)
+		fetches := kr.consumerClient.PollFetches(ctx)
 		if errs := fetches.Errors(); len(errs) > 0 {
 			kr.logger.Errorw("Error polling fetches", "errors", errs)
 			continue
@@ -85,5 +104,28 @@ func (kr *KafkaCommunicator) StartTopicConsumer() {
 			kr.logger.Debugw("parsed news event", &newsEvent)
 			kr.consumeChan <- message
 		}
+	}
+}
+
+func (kr *KafkaCommunicator) StartTopicProducer() {
+	ctx := context.Background()
+
+	for msg := range kr.produceChan {
+		marshalled, err := proto.Marshal(msg.NewsAnalyzed)
+
+		if err != nil {
+			kr.logger.Errorw("Error marshalling news analyzed", "error", err)
+			continue
+		}
+
+		record := &kgo.Record{
+			Value: marshalled,
+		}
+
+		kr.producerClient.Produce(ctx, record, func(_ *kgo.Record, err error) {
+			if err != nil {
+				kr.logger.Errorw("Error producing message", "error", err)
+			}
+		})
 	}
 }

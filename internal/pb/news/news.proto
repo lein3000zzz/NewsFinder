@@ -1,8 +1,10 @@
 syntax = "proto3";
 
+import "google/protobuf/struct.proto";
+
 package news.v1;
 
-option go_package = "./internal/pb/newsevent";
+option go_package = "./internal/pb/news";
 
 message NewsEvent {
   // референс на source id
@@ -25,10 +27,8 @@ message NewsAnalyzed {
   int64 ingested_at = 5;
   int64 prepared_at = 6;
 
-
+  google.protobuf.Struct analysis = 7;
 }
-
-
 
 message Source {
   string name = 1;

@@ -15,6 +15,13 @@ type News = nfsqlc.News
 type NewsParams = nfsqlc.AddNewsParams
 type Source = nfsqlc.Source
 
+var (
+	UnknownSource = &Source{
+		Name:        "unknown",
+		Credibility: 0,
+	}
+)
+
 type DataManager interface {
 	LookupNewsByHash(hash string) (bool, error)
 	LookupNewsByEmbedding(vector []float32) (bool, error)
