@@ -1,56 +1,56 @@
 package main
 
 import (
-	"NewsFinder/internal/analyzer"
 	"NewsFinder/internal/app"
-	"context"
 	"fmt"
 	"log"
 	"os"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/lein3000zzz/vault-config-manager/pkg/manager"
-	"go.uber.org/zap"
+	"github.com/clems4ever/all-minilm-l6-v2-go/all_minilm_l6_v2"
+	ort "github.com/yalue/onnxruntime_go"
 )
 
 func main() {
 	app.InitEnv()
 
-	zapLogger, err := zap.NewProduction()
+	ort.SetSharedLibraryPath(os.Getenv("ONNX_PATH"))
+
+	err := ort.InitializeEnvironment()
 	if err != nil {
-		log.Fatalf("Error initializing zap logger: %v", err)
+		log.Fatalf("Error initializing ort environment %s, %s", "error", err)
 	}
 
-	logger := zapLogger.Sugar()
-
-	ctx := context.Background()
-
-	pool, err := pgxpool.New(ctx, os.Getenv("PG_DSN"))
+	model, err := all_minilm_l6_v2.NewModel(
+		all_minilm_l6_v2.WithRuntimePath(os.Getenv("ONNX_PATH")),
+	)
 	if err != nil {
-		logger.Fatalf("Error connecting to database: %v", err)
+		panic(err)
 	}
-	defer pool.Close()
+	defer model.Close()
 
-	vaultAddress := os.Getenv("VAULT_ADDR")
-	token := os.Getenv("VAULT_TOKEN")
+	// Base sentence to compare against
+	baseSentence := "The dog is running in the park"
 
-	secretManager, err := manager.NewSecretManager(vaultAddress, token, manager.DefaultBasePathData, manager.DefaultBasePathMetaData, logger)
-	if err != nil {
-		logger.Fatalf("Error initializing secret manager: %v", err)
-	}
-
-	//queries := nfsqlc.New(pool)
-
-	inputText := "Binance Futures Will Launch USDⓈ-Margined COLLECTUSDT and MAGMAUSDT Perpetual Contract (2025-12-31)\n\n2025-12-31 13:15 (UTC): COLLECTUSDT Perpetual Contract with up to 20x leverage\n\n2025-12-31 13:30 (UTC): MAGMAUSDT Perpetual Contract with up to 20x leverage"
-
-	an := analyzer.NewNLPAnalyzer(logger)
-	res, err := an.Analyze(inputText)
-	if err != nil {
-		log.Fatalf("Error analyzing: %v", err)
+	// Three candidate sentences with varying degrees of similarity
+	candidates := []string{
+		"A dog runs through the park",      // Very similar
+		"The cat is sleeping on the couch", // Somewhat similar
+		"I love eating pizza for dinner",   // Not similar
 	}
 
-	logger.Infow("Result", "result", res)
+	// Compute embeddings
+	baseEmbedding, _ := model.Compute(baseSentence, true)
+	candidateEmbeddings, _ := model.ComputeBatch(candidates, true)
+
+	fmt.Println(baseEmbedding)
+	fmt.Println(candidateEmbeddings)
+
+	return
+
+	nf := app.InitApp()
+
+	nf.StartApp()
 
 	select {
 	case <-time.After(15 * time.Second):

@@ -20,7 +20,7 @@ type MemoryTagDetector struct {
 }
 
 func NewMemoryTagDetector(logger *zap.SugaredLogger, sm manager.SecretManager) *MemoryTagDetector {
-	url, err := sm.GetSecretStringFromConfig("binance_url")
+	url, err := sm.GetSecretStringFromConfig("BINANCE_URL")
 	if err != nil {
 		logger.Fatalf("error getting secret string from config: %v", err)
 	}
@@ -28,6 +28,8 @@ func NewMemoryTagDetector(logger *zap.SugaredLogger, sm manager.SecretManager) *
 	if err != nil {
 		logger.Fatalf("error getting binance info: %v", err)
 	}
+
+	logger.Infow("loaded cache entities and initialized tag detector", "count", len(set))
 
 	return &MemoryTagDetector{
 		logger:        logger,

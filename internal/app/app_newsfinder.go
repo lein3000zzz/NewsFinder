@@ -22,7 +22,14 @@ type NewsFinder struct {
 	analyzer     analyzer.Analyzer
 }
 
-func NewNewsFinder(config Config, logger *zap.SugaredLogger, communicator communicator.Communicator, dm datamanager.DataManager, dedup dedup.ManagerDedup, analyzer analyzer.Analyzer) *NewsFinder {
+func NewNewsFinder(
+	config Config,
+	logger *zap.SugaredLogger,
+	communicator communicator.Communicator,
+	dm datamanager.DataManager,
+	dedup dedup.ManagerDedup,
+	analyzer analyzer.Analyzer,
+) *NewsFinder {
 	return &NewsFinder{
 		config:       config,
 		logger:       logger,
@@ -34,11 +41,11 @@ func NewNewsFinder(config Config, logger *zap.SugaredLogger, communicator commun
 }
 
 func (nf *NewsFinder) StartApp() {
-
+	go nf.startDataChanWorker()
 }
 
-// StartDataChanWorker TODO: refactor + add locking and parallel workers
-func (nf *NewsFinder) StartDataChanWorker() {
+// startDataChanWorker TODO: refactor + add locking and parallel workers
+func (nf *NewsFinder) startDataChanWorker() {
 	dataChan := nf.communicator.GetConsumeChan()
 
 	for message := range dataChan {

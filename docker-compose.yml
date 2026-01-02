@@ -1,4 +1,16 @@
 services:
+  nfapp:
+    build:
+      context: .
+      dockerfile: deployments/Dockerfile
+    env_file:
+      - main.env
+    #    ports:
+    #      - "36767:36767"
+    restart: always
+    networks:
+      newsfinder:
+
   db:
     image: pgvector/pgvector:pg16
     ports:

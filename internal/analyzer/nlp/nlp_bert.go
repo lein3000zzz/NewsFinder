@@ -22,13 +22,6 @@ type AnalyzerNLPBert struct {
 }
 
 func NewNLPAnalyzerBert(logger *zap.SugaredLogger) *AnalyzerNLPBert {
-	ort.SetSharedLibraryPath(os.Getenv("ONNX_PATH"))
-
-	err := ort.InitializeEnvironment()
-	if err != nil {
-		logger.Fatalw("Error initializing ort environment", "error", err)
-	}
-
 	//defer ort.DestroyEnvironment()
 
 	tk, err := pretrained.FromFile(os.Getenv("MODEL_TOKENIZER_PATH"))

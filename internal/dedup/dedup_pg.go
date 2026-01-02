@@ -5,7 +5,6 @@ import (
 	"NewsFinder/internal/pb/news"
 	"crypto/sha256"
 	"encoding/hex"
-	"os"
 	"regexp"
 	"strings"
 
@@ -26,8 +25,7 @@ type PgDedupManager struct {
 }
 
 func NewPgDedup(logger *zap.SugaredLogger, dm datamanager.DataManager) *PgDedupManager {
-	model, err := all_minilm_l6_v2.NewModel(
-		all_minilm_l6_v2.WithRuntimePath(os.Getenv("ONNX_PATH")))
+	model, err := all_minilm_l6_v2.NewModel()
 	if err != nil {
 		logger.Fatalw("Error creating model", "error", err)
 	}
