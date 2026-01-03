@@ -6,8 +6,8 @@ import (
 )
 
 type AnalysisRes struct {
-	tagDetectorRes *tagdetector.DetectorRes
-	nlpRes         *nlp.CryptoBertRes
+	TagDetectorRes *tagdetector.DetectorRes `json:"tag_detector"`
+	NlpRes         *nlp.CryptoBertRes       `json:"nlp_crypto_bert"`
 }
 
 type Analyzer interface {

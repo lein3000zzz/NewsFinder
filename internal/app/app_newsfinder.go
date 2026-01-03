@@ -41,6 +41,7 @@ func NewNewsFinder(
 }
 
 func (nf *NewsFinder) StartApp() {
+	go nf.communicator.StartTopicConsumer()
 	go nf.startDataChanWorker()
 }
 
@@ -48,7 +49,10 @@ func (nf *NewsFinder) StartApp() {
 func (nf *NewsFinder) startDataChanWorker() {
 	dataChan := nf.communicator.GetConsumeChan()
 
+	nf.logger.Infow("started datachan worker")
 	for message := range dataChan {
+		nf.logger.Infow("received datachan message", "message", message)
+
 		hardDedupRes, err := nf.dedup.CheckExistsHard(message.Event)
 		if err != nil {
 			nf.logger.Errorw("Error checking existence hard, skipping", "err", err)

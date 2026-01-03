@@ -79,7 +79,7 @@ func (q *Queries) GetSourceByID(ctx context.Context, id uuid.UUID) (Source, erro
 	return i, err
 }
 
-const lookupByHash = `-- name: LookupNewsByHash :one
+const lookupByHash = `-- name: LookupByHash :one
 SELECT 1
     FROM news
     WHERE content_hash = $1

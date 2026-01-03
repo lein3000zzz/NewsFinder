@@ -11,8 +11,8 @@ import (
 )
 
 type CryptoBertRes struct {
-	Bearish float32
-	Bullish float32
+	Bearish float32 `json:"bearish"`
+	Bullish float32 `json:"bullish"`
 }
 
 type AnalyzerNLPBert struct {
@@ -48,6 +48,8 @@ func NewNLPAnalyzerBert(logger *zap.SugaredLogger) *AnalyzerNLPBert {
 
 // Analyze TODO: refactor
 func (a *AnalyzerNLPBert) Analyze(content string) (*CryptoBertRes, error) {
+	a.logger.Infow("nlp analyzing content", "content", content)
+
 	encoded, err := a.tokenizer.EncodeSingle(content)
 	if err != nil {
 		a.logger.Errorw("Error encoding content", "content", content, "error", err)

@@ -78,12 +78,16 @@ func (kr *KafkaCommunicator) WriteToProduceChan(msg *ProduceMessage) {
 func (kr *KafkaCommunicator) StartTopicConsumer() {
 	ctx := context.Background()
 
+	kr.logger.Infow("starting new kafka topic consumer")
 	for {
+		kr.logger.Infow("waiting for new kafka topic consumer")
 		fetches := kr.consumerClient.PollFetches(ctx)
 		if errs := fetches.Errors(); len(errs) > 0 {
 			kr.logger.Errorw("Error polling fetches", "errors", errs)
 			continue
 		}
+
+		kr.logger.Infow("new kafka message consumed")
 
 		iter := fetches.RecordIter()
 		for !iter.Done() {
@@ -96,12 +100,14 @@ func (kr *KafkaCommunicator) StartTopicConsumer() {
 				continue
 			}
 
+			kr.logger.Infow("new news event", "event", &newsEvent)
+
 			message := &ConsumeMessage{
 				Event:      &newsEvent,
 				IngestedAt: time.Now(),
 			}
 
-			kr.logger.Debugw("parsed news event", &newsEvent)
+			kr.logger.Infow("parsed news event", &newsEvent)
 			kr.consumeChan <- message
 		}
 	}

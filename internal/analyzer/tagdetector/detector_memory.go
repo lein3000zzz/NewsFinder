@@ -59,6 +59,8 @@ func NewMemoryTagDetector(logger *zap.SugaredLogger, sm manager.SecretManager) *
 }
 
 func (md *MemoryTagDetector) DetectTags(content string) *DetectorRes {
+	md.logger.Infow("detecting tags")
+
 	words := strings.Fields(nonAlphanumeric.ReplaceAllString(strings.ToUpper(content), " "))
 
 	foundTags := make(map[string]struct{})

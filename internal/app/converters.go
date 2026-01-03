@@ -31,11 +31,15 @@ func (nf *NewsFinder) convertResultsToNewsParams(
 		return nil, err
 	}
 
+	nf.logger.Infow("analysis on covert", "a", analysisRes)
+
 	analysis, err := json.Marshal(analysisRes)
 	if err != nil {
 		nf.logger.Errorw("Error marshalling analysis", "err", err)
 		return nil, err
 	}
+
+	nf.logger.Infow("converting results to news params", "analysis", analysis)
 
 	newsParams := &datamanager.NewsParams{
 		ID:               v7,

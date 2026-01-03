@@ -1,7 +1,6 @@
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE EXTENSION IF NOT EXISTS vector;
 
-CREATE TABLE sources (
+CREATE TABLE IF NOT EXISTS sources (
     id UUID PRIMARY KEY,
 
     name VARCHAR(255) NOT NULL UNIQUE,
@@ -14,7 +13,7 @@ CREATE TABLE sources (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE news (
+CREATE TABLE IF NOT EXISTS news (
     id UUID PRIMARY KEY,
 
     source_id UUID NOT NULL REFERENCES sources(id),
@@ -31,3 +30,12 @@ CREATE TABLE news (
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_news_content_hash ON news(content_hash);
+
+CREATE INDEX IF NOT EXISTS idx_news_embedding_hnsw ON news
+    USING hnsw (content_embedding vector_cosine_ops);
+
+CREATE INDEX IF NOT EXISTS idx_news_published_at ON news(published_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_news_source_id ON news(source_id);
