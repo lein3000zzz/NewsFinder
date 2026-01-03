@@ -14,7 +14,6 @@ message NewsEvent {
   string content = 3;
 
   int64 published_at = 4;
-  int64 ingested_at = 5;
 }
 
 message NewsAnalyzed {

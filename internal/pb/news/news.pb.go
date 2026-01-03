@@ -29,7 +29,6 @@ type NewsEvent struct {
 	Title         string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
 	Content       string `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
 	PublishedAt   int64  `protobuf:"varint,4,opt,name=published_at,json=publishedAt,proto3" json:"published_at,omitempty"`
-	IngestedAt    int64  `protobuf:"varint,5,opt,name=ingested_at,json=ingestedAt,proto3" json:"ingested_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -88,13 +87,6 @@ func (x *NewsEvent) GetContent() string {
 func (x *NewsEvent) GetPublishedAt() int64 {
 	if x != nil {
 		return x.PublishedAt
-	}
-	return 0
-}
-
-func (x *NewsEvent) GetIngestedAt() int64 {
-	if x != nil {
-		return x.IngestedAt
 	}
 	return 0
 }
@@ -248,14 +240,12 @@ var File_news_proto protoreflect.FileDescriptor
 const file_news_proto_rawDesc = "" +
 	"\n" +
 	"\n" +
-	"news.proto\x12\anews.v1\x1a\x1cgoogle/protobuf/struct.proto\"\x9c\x01\n" +
+	"news.proto\x12\anews.v1\x1a\x1cgoogle/protobuf/struct.proto\"{\n" +
 	"\tNewsEvent\x12\x1b\n" +
 	"\tsource_id\x18\x01 \x01(\tR\bsourceId\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x18\n" +
 	"\acontent\x18\x03 \x01(\tR\acontent\x12!\n" +
-	"\fpublished_at\x18\x04 \x01(\x03R\vpublishedAt\x12\x1f\n" +
-	"\vingested_at\x18\x05 \x01(\x03R\n" +
-	"ingestedAt\"\x81\x02\n" +
+	"\fpublished_at\x18\x04 \x01(\x03R\vpublishedAt\"\x81\x02\n" +
 	"\fNewsAnalyzed\x12'\n" +
 	"\x06source\x18\x01 \x01(\v2\x0f.news.v1.SourceR\x06source\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x18\n" +
