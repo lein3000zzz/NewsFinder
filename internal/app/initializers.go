@@ -16,16 +16,19 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"github.com/lein3000zzz/vault-config-manager/pkg/manager"
+	ort "github.com/yalue/onnxruntime_go"
 	"go.uber.org/zap"
 )
 
 func InitApp() *NewsFinder {
-	InitEnv()
+	initEnv()
 
 	logger := initLogger()
 
 	sm := initSecretManager(logger)
 	pgPool := initPgxPool()
+
+	initOrtEnv()
 
 	nlpAnalyzer := initNLPAnalyzer(logger)
 	tagDetector := initTagDetector(logger, sm)
@@ -51,6 +54,15 @@ func initAppConfig() Config {
 	return Config{
 		ProduceMessages: true,
 		SaveToDB:        true,
+	}
+}
+
+func initOrtEnv() {
+	ort.SetSharedLibraryPath(os.Getenv("ONNX_PATH"))
+
+	err := ort.InitializeEnvironment()
+	if err != nil {
+		log.Fatalf("Error initializing ort environment %s, %s", "error", err)
 	}
 }
 
@@ -143,7 +155,7 @@ func initLogger() *zap.SugaredLogger {
 	return logger
 }
 
-func InitEnv() {
+func initEnv() {
 	err := godotenv.Load("main.env")
 
 	if err != nil {

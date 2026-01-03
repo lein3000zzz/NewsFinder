@@ -2,7 +2,7 @@ module NewsFinder
 
 go 1.25.1
 
-replace github.com/clems4ever/all-minilm-l6-v2-go => github.com/lein3000zzz/all-minilm-l6-v2-go v0.0.0-20260102174843-51567e547e51
+replace github.com/clems4ever/all-minilm-l6-v2-go => github.com/lein3000zzz/all-minilm-l6-v2-go v0.0.0-20260103065036-5e3c25057dd8
 
 require (
 	github.com/clems4ever/all-minilm-l6-v2-go v0.0.9

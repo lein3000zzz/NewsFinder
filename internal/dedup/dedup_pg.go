@@ -25,7 +25,7 @@ type PgDedupManager struct {
 }
 
 func NewPgDedup(logger *zap.SugaredLogger, dm datamanager.DataManager) *PgDedupManager {
-	model, err := all_minilm_l6_v2.NewModel()
+	model, err := all_minilm_l6_v2.NewModelBare()
 	if err != nil {
 		logger.Fatalw("Error creating model", "error", err)
 	}
