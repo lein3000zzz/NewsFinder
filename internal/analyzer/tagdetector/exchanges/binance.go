@@ -1,4 +1,4 @@
-package externaldata
+package exchanges
 
 import (
 	"encoding/json"

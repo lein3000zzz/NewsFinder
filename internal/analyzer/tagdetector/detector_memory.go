@@ -1,13 +1,16 @@
 package tagdetector
 
 import (
-	"NewsFinder/internal/analyzer/tagdetector/externaldata"
+	"NewsFinder/internal/analyzer/tagdetector/datacombiner"
+	"NewsFinder/internal/analyzer/tagdetector/exchanges"
 	"regexp"
 	"strings"
 
 	"github.com/lein3000zzz/vault-config-manager/pkg/manager"
 	"go.uber.org/zap"
 )
+
+// TODO: add automatic dataset updates
 
 var (
 	nonAlphanumeric = regexp.MustCompile(`[^a-zA-Z0-9]`)
@@ -19,14 +22,31 @@ type MemoryTagDetector struct {
 	cacheEntities map[string]struct{}
 }
 
+// NewMemoryTagDetector TODO: refactor this laughably abooga constructor later
 func NewMemoryTagDetector(logger *zap.SugaredLogger, sm manager.SecretManager) *MemoryTagDetector {
-	url, err := sm.GetSecretStringFromConfig("BINANCE_URL")
+	binanceUrl, err := sm.GetSecretStringFromConfig("BINANCE_URL")
 	if err != nil {
 		logger.Fatalf("error getting secret string from config: %v", err)
 	}
-	set, err := externaldata.GetBinanceInfoSet(url)
+
+	bitgetUrl, err := sm.GetSecretStringFromConfig("BITGET_URL")
 	if err != nil {
-		logger.Fatalf("error getting binance info: %v", err)
+		logger.Fatalf("error getting secret string from config: %v", err)
+	}
+
+	binanceSource := &datacombiner.DataSource{
+		URL:        binanceUrl,
+		DataGetter: exchanges.GetBinanceInfoSet,
+	}
+
+	bitgetSource := &datacombiner.DataSource{
+		URL:        bitgetUrl,
+		DataGetter: exchanges.GetBitgetInfoSet,
+	}
+
+	set, err := datacombiner.CombineData(binanceSource, bitgetSource)
+	if err != nil {
+		logger.Fatalf("error combining data: %v", err)
 	}
 
 	logger.Infow("loaded cache entities and initialized tag detector", "count", len(set))
