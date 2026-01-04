@@ -47,6 +47,7 @@ func NewNewsFinder(
 
 func (nf *NewsFinder) StartApp() {
 	go nf.communicator.StartTopicConsumer()
+	go nf.communicator.StartTopicProducer()
 	go nf.startDataChanWorker()
 }
 
@@ -125,14 +126,18 @@ func (nf *NewsFinder) processMessage(message *communicator.ConsumeMessage) {
 	}
 
 	if hardDedupRes.Exists {
-		nf.logger.Debugw("Found hard duplicate, skipping...", "message", message)
+		nf.logger.Infow("Found hard duplicate, skipping", "message", message)
 		return
 	}
 
-	softDedupExists, err := nf.dedup.CheckExistsSoft(hardDedupRes)
+	softDedupRes, err := nf.dedup.CheckExistsSoft(hardDedupRes)
 	if err != nil {
 		nf.logger.Errorw("Error checking existence soft, skipping", "err", err)
 		return
+	}
+
+	if softDedupRes.Exists {
+		nf.logger.Infow("Found soft duplicate, but not skipping future processing", "message", message)
 	}
 
 	analysisRes, err := nf.analyzer.Analyze(hardDedupRes.Normalized)
@@ -141,7 +146,7 @@ func (nf *NewsFinder) processMessage(message *communicator.ConsumeMessage) {
 		return
 	}
 
-	newsParams, err := nf.convertResultsToNewsParams(message, hardDedupRes, softDedupExists, analysisRes)
+	newsParams, err := nf.convertResultsToNewsParams(message, hardDedupRes, softDedupRes, analysisRes)
 	if err != nil {
 		nf.logger.Errorw("Error converting message to newsParams, skipping", "message", message)
 		return

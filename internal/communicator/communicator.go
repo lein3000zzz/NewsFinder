@@ -17,5 +17,6 @@ type ProduceMessage struct {
 type Communicator interface {
 	GetConsumeChan() <-chan *ConsumeMessage
 	StartTopicConsumer()
+	StartTopicProducer()
 	WriteToProduceChan(msg *ProduceMessage)
 }

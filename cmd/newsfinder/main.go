@@ -9,5 +9,6 @@ func main() {
 
 	nf.StartApp()
 
+	// TODO: graceful shutdown, modular restarts, data and config autoupdates
 	select {}
 }

@@ -47,7 +47,6 @@ func InitApp() *NewsFinder {
 func initAppConfig() Config {
 	return Config{
 		ProduceMessages: true,
-		SaveToDB:        true,
 		WorkerCount:     runtime.NumCPU(),
 	}
 }
