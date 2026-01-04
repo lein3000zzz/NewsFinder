@@ -4,7 +4,7 @@ package app
 
 type Config struct {
 	ProduceMessages bool
-	SaveToDB        bool
+	WorkerCount     int
 }
 
 type App interface {

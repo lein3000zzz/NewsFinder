@@ -11,6 +11,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -40,20 +41,14 @@ func InitApp() *NewsFinder {
 	ded := initDedup(logger, dm)
 	cfg := initAppConfig()
 
-	return &NewsFinder{
-		config:       cfg,
-		logger:       logger,
-		communicator: kafkaComm,
-		dedup:        ded,
-		dm:           dm,
-		analyzer:     an,
-	}
+	return NewNewsFinder(cfg, logger, kafkaComm, dm, ded, an)
 }
 
 func initAppConfig() Config {
 	return Config{
 		ProduceMessages: true,
 		SaveToDB:        true,
+		WorkerCount:     runtime.NumCPU(),
 	}
 }
 

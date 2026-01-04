@@ -6,12 +6,17 @@ import (
 	"NewsFinder/internal/datamanager"
 	"NewsFinder/internal/dedup"
 	"NewsFinder/internal/pb/news"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/structpb"
 )
+
+type sourceWorker struct {
+	sync.Mutex
+}
 
 type NewsFinder struct {
 	config       Config
@@ -45,57 +50,113 @@ func (nf *NewsFinder) StartApp() {
 	go nf.startDataChanWorker()
 }
 
-// startDataChanWorker TODO: refactor + add locking and parallel workers
 func (nf *NewsFinder) startDataChanWorker() {
+	nf.logger.Infow("starting data channel worker")
+
 	dataChan := nf.communicator.GetConsumeChan()
 
-	nf.logger.Infow("started datachan worker")
-	for message := range dataChan {
-		nf.logger.Infow("received datachan message", "message", message)
+	workers := make(map[string]*sourceWorker)
+	var workersMu sync.RWMutex
 
-		hardDedupRes, err := nf.dedup.CheckExistsHard(message.Event)
-		if err != nil {
-			nf.logger.Errorw("Error checking existence hard, skipping", "err", err)
-			continue
-		}
+	var wg sync.WaitGroup
+	for i := 0; i < nf.config.WorkerCount; i++ {
+		wg.Add(1)
 
-		if hardDedupRes.Exists {
-			nf.logger.Debugw("Found hard duplicate, skipping...", "message", message)
-			continue
-		}
+		go func() {
+			defer wg.Done()
+			for message := range dataChan {
+				sourceID := message.Event.SourceId
 
-		softDedupExists, err := nf.dedup.CheckExistsSoft(hardDedupRes)
-		if err != nil {
-			nf.logger.Errorw("Error checking existence soft, skipping", "err", err)
-			continue
-		}
+				sw := nf.processSource(sourceID, workers, &workersMu)
 
-		analysisRes, err := nf.analyzer.Analyze(hardDedupRes.Normalized)
-		if err != nil {
-			nf.logger.Errorw("Error analyzing hard duplicate, skipping", "err", err)
-			continue
-		}
-
-		newsParams, err := nf.convertResultsToNewsParams(message, hardDedupRes, softDedupExists, analysisRes)
-		if err != nil {
-			nf.logger.Errorw("Error converting message to newsParams, skipping", "message", message)
-			continue
-		}
-
-		if nf.config.SaveToDB {
-			id, err := nf.dm.InsertNews(newsParams)
-
-			if err != nil {
-				nf.logger.Errorw("Error inserting news, skipping", "message", message)
-				//continue // TODO: решить, будет ли неудачное добавление в бд обрывать пайплайн
-			} else {
-				nf.logger.Debugw("Inserted new news", "id", id.String())
+				nf.processMessageBySourceWorker(sw, message)
 			}
-		}
+		}()
+	}
 
-		if nf.config.ProduceMessages {
-			go nf.produceFinalMessage(newsParams)
-		}
+	wg.Wait()
+
+	nf.logger.Info("All workers have been stopped")
+}
+
+func (nf *NewsFinder) processSource(sourceID string, workers map[string]*sourceWorker, workersMu *sync.RWMutex) *sourceWorker {
+	sw, exists := nf.getSourceWorker(sourceID, workers, workersMu)
+	if !exists {
+		sw = nf.processNewSource(sourceID, workers, workersMu)
+	}
+	return sw
+}
+
+func (nf *NewsFinder) processNewSource(sourceID string, workers map[string]*sourceWorker, workersMu *sync.RWMutex) *sourceWorker {
+	workersMu.Lock()
+	defer workersMu.Unlock()
+
+	sw, exists := workers[sourceID]
+	if !exists {
+		sw = &sourceWorker{}
+		workers[sourceID] = sw
+	}
+
+	return sw
+}
+
+func (nf *NewsFinder) getSourceWorker(sourceID string, workers map[string]*sourceWorker, workersMu *sync.RWMutex) (*sourceWorker, bool) {
+	workersMu.RLock()
+	defer workersMu.RUnlock()
+
+	sw, exists := workers[sourceID]
+	return sw, exists
+}
+
+func (nf *NewsFinder) processMessageBySourceWorker(sw *sourceWorker, message *communicator.ConsumeMessage) {
+	sw.Lock()
+	defer sw.Unlock()
+
+	nf.processMessage(message)
+}
+
+func (nf *NewsFinder) processMessage(message *communicator.ConsumeMessage) {
+	nf.logger.Infow("received datachan message", "message", message)
+
+	hardDedupRes, err := nf.dedup.CheckExistsHard(message.Event)
+	if err != nil {
+		nf.logger.Errorw("Error checking existence hard, skipping", "err", err)
+		return
+	}
+
+	if hardDedupRes.Exists {
+		nf.logger.Debugw("Found hard duplicate, skipping...", "message", message)
+		return
+	}
+
+	softDedupExists, err := nf.dedup.CheckExistsSoft(hardDedupRes)
+	if err != nil {
+		nf.logger.Errorw("Error checking existence soft, skipping", "err", err)
+		return
+	}
+
+	analysisRes, err := nf.analyzer.Analyze(hardDedupRes.Normalized)
+	if err != nil {
+		nf.logger.Errorw("Error analyzing hard duplicate, skipping", "err", err)
+		return
+	}
+
+	newsParams, err := nf.convertResultsToNewsParams(message, hardDedupRes, softDedupExists, analysisRes)
+	if err != nil {
+		nf.logger.Errorw("Error converting message to newsParams, skipping", "message", message)
+		return
+	}
+
+	id, err := nf.dm.InsertNews(newsParams)
+	if err != nil {
+		nf.logger.Errorw("Error inserting news, skipping", "message", message)
+		//return // TODO: решить, будет ли неудачное добавление в бд обрывать пайплайн
+	} else {
+		nf.logger.Debugw("Inserted new news", "id", id.String())
+	}
+
+	if nf.config.ProduceMessages {
+		go nf.produceFinalMessage(newsParams)
 	}
 }
 
