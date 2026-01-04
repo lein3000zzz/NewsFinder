@@ -42,7 +42,7 @@ services:
     env_file:
       - deployments/kafka/kafkaui.env
     ports:
-      - "8080:8080"
+      - "8181:8080"
     networks:
       newsfinder:
 
@@ -56,7 +56,7 @@ services:
       - ./deployments/opt/vault/data:/vault/data
       - ./deployments/vault/config:/vault/config
     ports:
-      - "8200:8200"
+      - "8201:8200"
     cap_add:
       - IPC_LOCK
     command: "server" # -config=/vault/config/vault.hcl # Конфиг подтягивается автоматически из файлов

@@ -15,6 +15,7 @@ require (
 	github.com/twmb/franz-go v1.20.6
 	github.com/yalue/onnxruntime_go v1.25.0
 	go.uber.org/zap v1.27.1
+	golang.org/x/sync v0.19.0
 	golang.org/x/text v0.32.0
 	google.golang.org/protobuf v1.36.11
 )
@@ -49,6 +50,5 @@ require (
 	github.com/twmb/franz-go/pkg/kmsg v1.12.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/net v0.48.0 // indirect
-	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 )
