@@ -20,6 +20,7 @@ services:
     volumes:
       - ./deployments/opt/postgres_data:/var/lib/postgresql/data
       - ./deployments/pgvector/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: always
     networks:
       newsfinder:
 
@@ -32,6 +33,7 @@ services:
       - ./deployments/kafka/kafka_server_jaas.conf:/etc/kafka/kafka_server_jaas.conf
     ports:
       - "29092:29092"
+    restart: always
     networks:
       newsfinder:
 
@@ -43,6 +45,7 @@ services:
       - deployments/kafka/kafkaui.env
     ports:
       - "8181:8080"
+    restart: always
     networks:
       newsfinder:
 
