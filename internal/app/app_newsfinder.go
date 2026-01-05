@@ -194,9 +194,9 @@ func (nf *NewsFinder) constructProduceMsg(source *datamanager.Source, newsParams
 		Source:      pbSource,
 		Title:       newsParams.Title,
 		Content:     newsParams.Content,
-		PublishedAt: newsParams.PublishedAt.UnixMilli(),
-		IngestedAt:  newsParams.IngestedAt.UnixMilli(),
-		PreparedAt:  time.Now().UnixMilli(),
+		PublishedAt: newsParams.PublishedAt.Unix(),
+		IngestedAt:  newsParams.IngestedAt.Unix(),
+		PreparedAt:  time.Now().Unix(),
 		Analysis:    analysis,
 	}
 
