@@ -46,7 +46,7 @@ func (nf *NewsFinder) convertResultsToNewsParams(
 		SourceID:         sourceID,
 		Title:            message.Event.Title,
 		Content:          message.Event.Content,
-		PublishedAt:      time.Unix(message.Event.PublishedAt/1000, 0),
+		PublishedAt:      time.UnixMilli(message.Event.PublishedAt),
 		IngestedAt:       message.IngestedAt,
 		ContentHash:      hardDedupRes.Hash,
 		ContentEmbedding: pgvector.NewVector(softDedupRes.Vector),
